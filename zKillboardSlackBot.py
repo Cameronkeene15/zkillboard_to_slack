@@ -228,10 +228,6 @@ class SlackMessage:
         print(url)
         return url
 
-    def format_isk_value(self, value):
-        value = '{:,.2f}'.format(value)
-        return value
-
     def generate_slack_message(self):
         slack_message = {"username": "zKillboard",
                          "attachments": [
@@ -263,7 +259,7 @@ class SlackMessage:
                                      },
                                      {
                                          "title": "Total Value",
-                                         "value": self.format_isk_value(self.kill.get_kill_value()),
+                                         "value":  ('{:,.2f}'.format(self.kill.get_kill_value())),
                                          "short": False
                                      }
                                  ],
