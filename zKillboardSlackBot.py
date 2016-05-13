@@ -3,14 +3,33 @@ import json
 import codecs
 import pprint
 import csv
+import re
 
 # for fixLazyJson
 import tokenize
 import token
 from io import *
 
+# change this to your webhook for the slack channel that you want kills posted to.
+slack_web_hook = 'https://hooks.slack.com/services/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'
+
+# change these to your corp id and alliance id. ONLY ALLIANCE ID WORKS RIGHT NOW!
+# TO DO: fix these so that only one is required, will probably do this as modes once a config file is incorporated.
 alliance_id = 99004364
 corporation_id = 98380820
+
+# Set how many kill id's will be kept locally.
+# Making the cache_size too large will slow down performance as the program pulls all kills after the smallest kill ID
+# and checks each kill pulled with each kill id in the list to see if the kill id pulled is a new kill or not.
+# Max size is 200 as zkillboard will return no more than 200 kills per pull.
+# Setting this too low can increase the chance that a kill that was updated late on zkillboard will not be pulled.
+# Recommended size is somewhere between 10-20 kills
+cache_size = 20
+
+# Change this to a recent kill that has occured on your alliance or corp killboard>
+# It is used so that at first run when there is no recent_kill_id_list.csv, it will not pull the last 200 kills from
+# zKillboard
+recent_kill = 53951414
 
 
 def main():
@@ -18,10 +37,10 @@ def main():
     url = generate_zkillboard_url()
     reader = codecs.getreader('utf-8')
     response = json.load(reader(urllib.request.urlopen(url)))
-    with open('json_info.txt', 'w') as json_file:
-        json_file.write(pprint.pformat(response))
-    #    with open('json_info.txt', 'r') as json_file:
-    #        response = json.loads(fixLazyJson(json_file.read()))
+#    with open('json_info.txt', 'w') as json_file:
+#        json_file.write(pprint.pformat(response))
+#     with open('json_info.txt', 'r') as json_file:
+#            response = json.loads(fixLazyJson(json_file.read()))
     kill_list = []
     if_new_kill = False
     for kill_mail in response:
@@ -36,15 +55,41 @@ def main():
             print(page)
         kill_list = generate_kill_id_list(kill, kill_list)
     if if_new_kill:
-        write_last_kill_list(kill_list, 50)
-    print('Finished')
+        write_last_kill_list(kill_list)
+
+
+def get_thumbnail_meta_data(kill):
+    url = 'https://zkillboard.com/kill/' + str(kill.get_kill_id())
+    reader = codecs.getreader('utf-8')
+    keyword_regex = re.compile('<meta\sname=["\']og:image["\']\scontent=["\'](.*?)["\']>')
+    html = reader(urllib.request.urlopen(url))
+    keyword_list = keyword_regex.findall(html.read())
+    if len(keyword_list) > 0:
+        keyword_list = keyword_list[0]
+        keyword_list = keyword_list.split(", ")
+    print(keyword_list)
+    return keyword_list[0]
+
+
+def get_title_meta_data(kill):
+    url = 'https://zkillboard.com/kill/' + str(kill.get_kill_id())
+    reader = codecs.getreader('utf-8')
+    keyword_regex = re.compile('<meta\sname=["\']og:description["\']\scontent=["\'](.*?)["\']>')
+    html = reader(urllib.request.urlopen(url))
+    keyword_list = keyword_regex.findall(html.read())
+    if len(keyword_list) > 0:
+        keyword_list = keyword_list[0]
+        keyword_list = keyword_list.split(", ")
+    print(keyword_list)
+    return keyword_list[0]
 
 
 def generate_zkillboard_url():
     url = 'https://zkillboard.com/api/'
-    url += 'allianceID/99004364/'
+    url += 'allianceID/' + str(alliance_id) + '/'
     url += 'afterKillID/' + str(min(get_last_kill_list())[0]) + '/'
     url += 'no-items/no-attackers/'
+    print(url)
     return url
 
 
@@ -52,7 +97,6 @@ def check_if_new_kill(kill):
     kill_list = get_last_kill_list()
     for kill_id in kill_list:
         if str(kill.get_kill_id()) == str(kill_id[0]):
-            print('already have this kill')
             return False
 
     else:
@@ -64,10 +108,11 @@ def get_last_kill_list():
         with open('recent_kill_id_list.csv', 'r', newline='') as kill_list_file:
             file_reader = csv.reader(kill_list_file, delimiter='\n')
             kill_list = list(file_reader)
-    except:
-        kill_list = ['0']
-    return kill_list
+    except FileNotFoundError:
+        print('File not found when getting list')
+        kill_list = [[str(recent_kill)]]
 
+    return kill_list
 
 
 def generate_kill_id_list(kill, kill_list):
@@ -75,18 +120,18 @@ def generate_kill_id_list(kill, kill_list):
     return kill_list
 
 
-def write_last_kill_list(kill_list, cache_size):
-    with open('recent_kill_id_list.csv', 'w', newline='') as kill_list_file:
-        writer = csv.writer(kill_list_file, delimiter='\n')
-        kill_list.sort(reverse=True)
-        while len(kill_list) > cache_size:
-            print('removing: ' + str(kill_list[-1]))
-            del kill_list[-1]
-        writer.writerow(kill_list)
-
-
-
-
+def write_last_kill_list(kill_list):
+    print(kill_list)
+    try:
+        with open('recent_kill_id_list.csv', 'w', newline='') as kill_list_file:
+            writer = csv.writer(kill_list_file, delimiter='\n')
+            kill_list.sort(reverse=True)
+            while len(kill_list) > cache_size:
+                print('removing: ' + str(kill_list[-1]))
+                del kill_list[-1]
+            writer.writerow(kill_list)
+    except:
+        print("Error when trying to write recent_kill_id_list.csv")
 
 
 def fixLazyJson(in_text):
@@ -234,7 +279,7 @@ class SlackMessage:
         slack_message = {"username": "zKillboard",
                          "attachments": [
                              {
-                                 "title": self.generate_message_title(),
+                                 "title": get_title_meta_data(self.kill),
                                  "title_link": self.get_kill_link(),
                                  "color": self.get_message_color(),
                                  "fields": [
@@ -261,11 +306,11 @@ class SlackMessage:
                                      },
                                      {
                                          "title": "Total Value",
-                                         "value":  ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
+                                         "value": ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
                                          "short": False
                                      }
                                  ],
-                                 "thumb_url": self.get_thumb_nail_url(),
+                                 "thumb_url": get_thumbnail_meta_data(self.kill),
                              }
                          ],
                          "icon_emoji": self.get_message_icon_emoji()}
