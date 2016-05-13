@@ -27,11 +27,11 @@ def main():
         kill = KillMail(kill_mail)
         if check_if_new_kill(kill):
             pprint.pformat(kill_mail)
-            slack_message = generate_slack_message(kill)
-            encoded_slack_message = encode_slack_message(slack_message)
-            req = urllib.request.urlopen(slack_web_hook, encoded_slack_message)
-            page = req.read()
-            print(page)
+            slack_message = SlackMessage(kill)
+            encoded_slack_message = slack_message.encode_slack_message()
+#            req = urllib.request.urlopen(slack_web_hook, encoded_slack_message)
+#            page = req.read()
+#            print(page)
         kill_list = generate_kill_id_list(kill, kill_list)
     write_last_kill_list(kill_list, 10)
     print('Finished')
@@ -58,10 +58,14 @@ def check_if_new_kill(kill):
 
 
 def get_last_kill_list():
-    with open('recent_kill_id_list.csv', 'r', newline='') as kill_list_file:
-        file_reader = csv.reader(kill_list_file, delimiter='\n')
-        kill_list = list(file_reader)
+    try:
+        with open('recent_kill_id_list.csv', 'r', newline='') as kill_list_file:
+            file_reader = csv.reader(kill_list_file, delimiter='\n')
+            kill_list = list(file_reader)
+    except:
+        kill_list = ['0']
     return kill_list
+
 
 
 def generate_kill_id_list(kill, kill_list):
@@ -79,96 +83,8 @@ def write_last_kill_list(kill_list, cache_size):
         writer.writerow(kill_list)
 
 
-def format_isk_value(value):
-    value = '{:,.2f}'.format(value)
-    return value
 
 
-def generate_message_title(kill):
-    victim = kill.get_victim_character_name()
-    corporation = kill.get_victim_corporation_name()
-    ship_name = kill.get_ship_name()
-
-    title = victim + '(' + corporation + ') lost their ' + ship_name
-    return title
-
-
-def get_kill_link(kill):
-    kill_link = 'https://zkillboard.com/kill/' + str(kill.get_kill_id())
-    return kill_link
-
-
-def get_message_color(kill):
-    if alliance_id == kill.get_victim_alliance_id() or corporation_id == kill.get_victim_corporation_id():
-        color = '#ff0000'
-    else:
-        color = '#36a64f'
-    return color
-
-
-def get_message_icon_emoji(kill):
-    if alliance_id == kill.get_victim_alliance_id() or corporation_id == kill.get_victim_corporation_id():
-        icon_emoji = ':skull_and_crossbones:'
-    else:
-        icon_emoji = ':sunglasses:'
-    return icon_emoji
-
-
-def get_thumb_nail_url(kill):
-    url = 'https://image.eveonline.com/Render/'
-    url += str(kill.get_ship_id())
-    url += '_64.png'
-    print(url)
-    return url
-
-
-# Formats one slack message using the json data of one kill
-def generate_slack_message(kill):
-    slack_message = {"username": "zKillboard",
-                     "attachments": [
-                         {
-                             "title": generate_message_title(kill),
-                             "title_link": get_kill_link(kill),
-                             "color": get_message_color(kill),
-                             "fields": [
-                                 {
-                                     "title": "Date",
-                                     "value": kill.get_kill_time(),
-                                     "short": True
-
-                                 },
-                                 {
-                                     "title": "Ship Name",
-                                     "value": kill.get_ship_name(),
-                                     "short": True
-                                 },
-                                 {
-                                     "title": "Pilot Name",
-                                     "value": kill.get_victim_character_name(),
-                                     "short": True
-                                 },
-                                 {
-                                     "title": "Corporation Name",
-                                     "value": kill.get_victim_corporation_name(),
-                                     "short": True
-                                 },
-                                 {
-                                     "title": "Total Value",
-                                     "value": format_isk_value(kill.get_kill_value()),
-                                     "short": False
-                                 }
-                             ],
-                             "thumb_url": get_thumb_nail_url(kill),
-                         }
-                     ],
-                     "icon_emoji": get_message_icon_emoji(kill)}
-    return slack_message
-
-
-# Formats the message as Json and encodes it making it ready to be sent to slack
-def encode_slack_message(slack_message):
-    encoded_message = json.dumps(slack_message).encode('utf-8')
-    return encoded_message
 
 
 def fixLazyJson(in_text):
@@ -273,6 +189,93 @@ class KillMail:
                 return row[1]
         else:
             return 'Item Name Unknown'
+
+
+class SlackMessage:
+    def __init__(self, kill):
+        self.kill = kill
+
+    def generate_message_title(self):
+        victim = self.kill.get_victim_character_name()
+        corporation = self.kill.get_victim_corporation_name()
+        ship_name = self.kill.get_ship_name()
+
+        title = victim + '(' + corporation + ') lost their ' + ship_name
+        return title
+
+    def get_kill_link(self):
+        kill_link = 'https://zkillboard.com/kill/' + str(self.kill.get_kill_id())
+        return kill_link
+
+    def get_message_color(self):
+        if alliance_id == self.kill.get_victim_alliance_id() or corporation_id == self.kill.get_victim_corporation_id():
+            color = '#ff0000'
+        else:
+            color = '#36a64f'
+        return color
+
+    def get_message_icon_emoji(self):
+        if alliance_id == self.kill.get_victim_alliance_id() or corporation_id == self.kill.get_victim_corporation_id():
+            icon_emoji = ':skull_and_crossbones:'
+        else:
+            icon_emoji = ':sunglasses:'
+        return icon_emoji
+
+    def get_thumb_nail_url(self):
+        url = 'https://image.eveonline.com/Render/'
+        url += str(self.kill.get_ship_id())
+        url += '_64.png'
+        print(url)
+        return url
+
+    def format_isk_value(self, value):
+        value = '{:,.2f}'.format(value)
+        return value
+
+    def generate_slack_message(self):
+        slack_message = {"username": "zKillboard",
+                         "attachments": [
+                             {
+                                 "title": self.generate_message_title(),
+                                 "title_link": self.get_kill_link(),
+                                 "color": self.get_message_color(),
+                                 "fields": [
+                                     {
+                                         "title": "Date",
+                                         "value": self.kill.get_kill_time(),
+                                         "short": True
+
+                                     },
+                                     {
+                                         "title": "Ship Name",
+                                         "value": self.kill.get_ship_name(),
+                                         "short": True
+                                     },
+                                     {
+                                         "title": "Pilot Name",
+                                         "value": self.kill.get_victim_character_name(),
+                                         "short": True
+                                     },
+                                     {
+                                         "title": "Corporation Name",
+                                         "value": self.kill.get_victim_corporation_name(),
+                                         "short": True
+                                     },
+                                     {
+                                         "title": "Total Value",
+                                         "value": self.format_isk_value(self.kill.get_kill_value()),
+                                         "short": False
+                                     }
+                                 ],
+                                 "thumb_url": self.get_thumb_nail_url(),
+                             }
+                         ],
+                         "icon_emoji": self.get_message_icon_emoji()}
+        return slack_message
+
+    def encode_slack_message(self):
+        encoded_message = json.dumps(self.generate_slack_message()).encode('utf-8')
+        return encoded_message
 
 
 main()
