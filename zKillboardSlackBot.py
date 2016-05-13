@@ -23,24 +23,26 @@ def main():
     #    with open('json_info.txt', 'r') as json_file:
     #        response = json.loads(fixLazyJson(json_file.read()))
     kill_list = []
+    if_new_kill = False
     for kill_mail in response:
         kill = KillMail(kill_mail)
         if check_if_new_kill(kill):
+            if_new_kill = True
             pprint.pformat(kill_mail)
             slack_message = SlackMessage(kill)
             encoded_slack_message = slack_message.encode_slack_message()
-#            req = urllib.request.urlopen(slack_web_hook, encoded_slack_message)
-#            page = req.read()
-#            print(page)
+            req = urllib.request.urlopen(slack_web_hook, encoded_slack_message)
+            page = req.read()
+            print(page)
         kill_list = generate_kill_id_list(kill, kill_list)
-    write_last_kill_list(kill_list, 10)
+    if if_new_kill:
+        write_last_kill_list(kill_list, 50)
     print('Finished')
 
 
 def generate_zkillboard_url():
     url = 'https://zkillboard.com/api/'
     url += 'allianceID/99004364/'
-    #    url += 'afterKillID/53857444/'
     url += 'afterKillID/' + str(min(get_last_kill_list())[0]) + '/'
     url += 'no-items/no-attackers/'
     return url
@@ -259,7 +261,7 @@ class SlackMessage:
                                      },
                                      {
                                          "title": "Total Value",
-                                         "value":  ('{:,.2f}'.format(self.kill.get_kill_value())),
+                                         "value":  ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
                                          "short": False
                                      }
                                  ],
