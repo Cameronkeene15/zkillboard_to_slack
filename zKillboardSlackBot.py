@@ -231,6 +231,13 @@ class SlackMessage:
             icon_emoji = ':sunglasses:'
         return icon_emoji
 
+    def get_message_user_name(self):
+        if alliance_id == self.kill.get_victim_alliance_id() or corporation_id == self.kill.get_victim_corporation_id():
+            user_name = 'Loss'
+        else:
+            user_name = 'Kill'
+        return user_name
+
     def get_thumb_nail_url(self):
         url = 'https://image.eveonline.com/Render/'
         url += str(self.kill.get_ship_id())
@@ -239,7 +246,7 @@ class SlackMessage:
         return url
 
     def generate_slack_message(self):
-        slack_message = {"username": "zKillboard",
+        slack_message = {"username": self.get_message_user_name(),
                          "attachments": [
                              {
                                  "title": get_title_meta_data(self.kill),
@@ -276,7 +283,8 @@ class SlackMessage:
                                  "thumb_url": get_thumbnail_meta_data(self.kill),
                              }
                          ],
-                         "icon_emoji": self.get_message_icon_emoji()}
+                         "icon_emoji": self.get_message_icon_emoji()
+                         }
         return slack_message
 
     def encode_slack_message(self):
