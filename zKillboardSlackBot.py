@@ -24,27 +24,29 @@ corporation_id = 98380820
 # Max size is 200 as zkillboard will return no more than 200 kills per pull.
 # Setting this too low can increase the chance that a kill that was updated late on zkillboard will not be pulled.
 # Recommended size is somewhere between 10-20 kills
-cache_size = 20
+
 
 # Change this to a recent kill that has occured on your alliance or corp killboard>
 # It is used so that at first run when there is no recent_kill_id_list.csv, it will not pull the last 200 kills from
 # zKillboard
-recent_kill = 53951414
+recent_kill = 53934369
 
 
 def main():
-    url = generate_zkillboard_url()
+    cache_size = 10
+    data = DataHandler(cache_size)
+    data.read_kill_list_file()
+    url = generate_zkillboard_url(data)
     reader = codecs.getreader('utf-8')
     response = json.load(reader(urllib.request.urlopen(url)))
 #    with open('json_info.txt', 'w') as json_file:
 #        json_file.write(pprint.pformat(response))
 #     with open('json_info.txt', 'r') as json_file:
 #            response = json.loads(fixLazyJson(json_file.read()))
-    kill_list = []
     if_new_kill = False
     for kill_mail in response:
         kill = KillMail(kill_mail)
-        if check_if_new_kill(kill):
+        if data.check_if_new_kill(kill):
             if_new_kill = True
             pprint.pformat(kill_mail)
             slack_message = SlackMessage(kill)
@@ -52,9 +54,9 @@ def main():
             req = urllib.request.urlopen(slack_web_hook, encoded_slack_message)
             page = req.read()
             print(page)
-        kill_list = generate_kill_id_list(kill, kill_list)
+        data.add_kill_id(kill.get_kill_id())
     if if_new_kill:
-        write_last_kill_list(kill_list)
+        data.write_kill_list_file()
 
 
 def get_thumbnail_meta_data(kill):
@@ -83,54 +85,16 @@ def get_title_meta_data(kill):
     return keyword_list[0]
 
 
-def generate_zkillboard_url():
+def generate_zkillboard_url(data):
     url = 'https://zkillboard.com/api/'
     url += 'allianceID/' + str(alliance_id) + '/'
-    url += 'afterKillID/' + str(min(get_last_kill_list())[0]) + '/'
+    url += 'afterKillID/' + str(min(data.get_kill_list())) + '/'
     url += 'no-items/no-attackers/'
     print(url)
     return url
 
 
-def check_if_new_kill(kill):
-    kill_list = get_last_kill_list()
-    for kill_id in kill_list:
-        if str(kill.get_kill_id()) == str(kill_id[0]):
-            return False
 
-    else:
-        return True
-
-
-def get_last_kill_list():
-    try:
-        with open('recent_kill_id_list.csv', 'r', newline='') as kill_list_file:
-            file_reader = csv.reader(kill_list_file, delimiter='\n')
-            kill_list = list(file_reader)
-    except FileNotFoundError:
-        print('File not found when getting list')
-        kill_list = [[str(recent_kill)]]
-
-    return kill_list
-
-
-def generate_kill_id_list(kill, kill_list):
-    kill_list.append(kill.get_kill_id())
-    return kill_list
-
-
-def write_last_kill_list(kill_list):
-    print(kill_list)
-    try:
-        with open('recent_kill_id_list.csv', 'w', newline='') as kill_list_file:
-            writer = csv.writer(kill_list_file, delimiter='\n')
-            kill_list.sort(reverse=True)
-            while len(kill_list) > cache_size:
-                print('removing: ' + str(kill_list[-1]))
-                del kill_list[-1]
-            writer.writerow(kill_list)
-    except:
-        print("Error when trying to write recent_kill_id_list.csv")
 
 
 def fixLazyJson(in_text):
@@ -319,5 +283,59 @@ class SlackMessage:
         encoded_message = json.dumps(self.generate_slack_message()).encode('utf-8')
         return encoded_message
 
+
+class DataHandler:
+    def __init__(self, cache_size):
+        self.kill_list = []
+        self.cache_size = cache_size
+
+    def set_cache_size(self, cache_size):
+        self.cache_size = cache_size
+
+    def get_cache_size(self):
+        return self.cache_size
+
+    def get_kill_list(self):
+        return self.kill_list
+
+    def set_kill_list(self, new_list):
+        self.kill_list = new_list
+
+    def add_kill_id(self, kill_id):
+        self.kill_list.append(kill_id)
+
+    def check_if_new_kill(self, kill):
+        kill_list = self.get_kill_list()
+        for kill_id in kill_list:
+            if str(kill.get_kill_id()) == str(kill_id):
+                return False
+
+        else:
+            return True
+
+    def write_kill_list_file(self):
+        print(self.kill_list)
+        try:
+            with open('recent_kill_list.csv', 'w', newline='') as kill_list_file:
+                writer = csv.writer(kill_list_file, delimiter='\n')
+                self.kill_list.sort(reverse=True)
+                while len(self.kill_list) > self.cache_size:
+                    print('removing: ' + str(self.kill_list[-1]))
+                    del self.kill_list[-1]
+                writer.writerow(self.kill_list)
+        except:
+            print('Error writing recent_kill_list.csv')
+
+    def read_kill_list_file(self):
+        try:
+            with open('recent_kill_list.csv', 'r', newline='') as kill_list_file:
+                file_reader = csv.reader(kill_list_file, delimiter='\n')
+                for kill_id in file_reader:
+                    self.kill_list.append(kill_id[0])
+# Needed to convert the Items in the list from Strings to Ints because csv.reader returns a list of Strings
+                self.kill_list = list(map(int, self.kill_list))
+        except FileNotFoundError:
+            print('recent_kill_id_list.csv now found\nUsing recent_kill\n')
+            self.kill_list = [recent_kill]
 
 main()
