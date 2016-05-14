@@ -33,7 +33,6 @@ recent_kill = 53951414
 
 
 def main():
-    slack_web_hook = 'https://hooks.slack.com/services/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'
     url = generate_zkillboard_url()
     reader = codecs.getreader('utf-8')
     response = json.load(reader(urllib.request.urlopen(url)))
