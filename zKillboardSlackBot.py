@@ -12,6 +12,7 @@ from io import *
 
 # change this to your webhook for the slack channel that you want kills posted to.
 slack_web_hook = 'https://hooks.slack.com/services/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'
+# slack_web_hook = 'https://hooks.slack.com/services/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'
 
 # change these to your corp id and alliance id. ONLY ALLIANCE ID WORKS RIGHT NOW!
 # TO DO: fix these so that only one is required, will probably do this as modes once a config file is incorporated.
@@ -39,10 +40,10 @@ def main():
     url = generate_zkillboard_url(data)
     reader = codecs.getreader('utf-8')
     response = json.load(reader(urllib.request.urlopen(url)))
-#    with open('json_info.txt', 'w') as json_file:
-#        json_file.write(pprint.pformat(response))
-#     with open('json_info.txt', 'r') as json_file:
-#            response = json.loads(fixLazyJson(json_file.read()))
+    #    with open('json_info.txt', 'w') as json_file:
+    #        json_file.write(pprint.pformat(response))
+    #     with open('json_info.txt', 'r') as json_file:
+    #            response = json.loads(fixLazyJson(json_file.read()))
     if_new_kill = False
     for kill_mail in response:
         kill = KillMail(kill_mail)
@@ -54,9 +55,16 @@ def main():
             req = urllib.request.urlopen(slack_web_hook, encoded_slack_message)
             page = req.read()
             print(page)
-        data.add_kill_id(kill.get_kill_id())
+            data.add_kill_id(kill.get_kill_id())
     if if_new_kill:
         data.write_kill_list_file()
+
+
+def remove_total_value_from_title(title):
+    if ' Total Value:' in title:
+        title = title[:title.find(' Total Value:')]
+    print(title)
+    return title
 
 
 def get_thumbnail_meta_data(kill):
@@ -82,7 +90,8 @@ def get_title_meta_data(kill):
         keyword_list = keyword_list[0]
         keyword_list = keyword_list.split(", ")
     print(keyword_list)
-    return keyword_list[0]
+    title = remove_total_value_from_title(keyword_list[0])
+    return title
 
 
 def generate_zkillboard_url(data):
@@ -92,9 +101,6 @@ def generate_zkillboard_url(data):
     url += 'no-items/no-attackers/'
     print(url)
     return url
-
-
-
 
 
 def fixLazyJson(in_text):
@@ -245,50 +251,75 @@ class SlackMessage:
         print(url)
         return url
 
+    # Old format, decided to use V2 instead because it takes up less space and fields does not repeat the title.
     def generate_slack_message(self):
-        slack_message = {"username": self.get_message_user_name(),
-                         "attachments": [
-                             {
-                                 "title": get_title_meta_data(self.kill),
-                                 "title_link": self.get_kill_link(),
-                                 "color": self.get_message_color(),
-                                 "fields": [
-                                     {
-                                         "title": "Date",
-                                         "value": self.kill.get_kill_time(),
-                                         "short": True
+        slack_message = {
+            "username": self.get_message_user_name(),
+            "attachments": [
+                {
+                    "title": get_title_meta_data(self.kill),
+                    "title_link": self.get_kill_link(),
+                    "color": self.get_message_color(),
+                    "fields": [
+                        {
+                            "title": "Date",
+                            "value": self.kill.get_kill_time(),
+                            "short": True
 
-                                     },
-                                     {
-                                         "title": "Ship Name",
-                                         "value": self.kill.get_ship_name(),
-                                         "short": True
-                                     },
-                                     {
-                                         "title": "Pilot Name",
-                                         "value": self.kill.get_victim_character_name(),
-                                         "short": True
-                                     },
-                                     {
-                                         "title": "Corporation Name",
-                                         "value": self.kill.get_victim_corporation_name(),
-                                         "short": True
-                                     },
-                                     {
-                                         "title": "Total Value",
-                                         "value": ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
-                                         "short": False
-                                     }
-                                 ],
-                                 "thumb_url": get_thumbnail_meta_data(self.kill),
-                             }
-                         ],
-                         "icon_emoji": self.get_message_icon_emoji()
-                         }
+                        },
+                        {
+                            "title": "Ship Name",
+                            "value": self.kill.get_ship_name(),
+                            "short": True
+                        },
+                        {
+                            "title": "Pilot Name",
+                            "value": self.kill.get_victim_character_name(),
+                            "short": True
+                        },
+                        {
+                            "title": "Corporation Name",
+                            "value": self.kill.get_victim_corporation_name(),
+                            "short": True
+                        },
+                        {
+                            "title": "Total Value",
+                            "value": ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
+                            "short": False
+                        }
+                    ],
+                    "thumb_url": get_thumbnail_meta_data(self.kill),
+                }
+            ],
+            "icon_emoji": self.get_message_icon_emoji()
+        }
+        return slack_message
+
+    def generate_slack_message_v2(self):
+        slack_message = {
+            "username": self.get_message_user_name(),
+            "attachments": [
+                {
+                    "title": get_title_meta_data(self.kill),
+                    "title_link": self.get_kill_link(),
+                    "color": self.get_message_color(),
+                    "fields": [
+                        {
+                            "title": "Total Value",
+                            "value": ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
+                            "short": False
+                        }
+                    ],
+                    "thumb_url": get_thumbnail_meta_data(self.kill),
+                    "fallback": "New Killmail!",
+                }
+            ],
+            "icon_emoji": self.get_message_icon_emoji()
+        }
         return slack_message
 
     def encode_slack_message(self):
-        encoded_message = json.dumps(self.generate_slack_message()).encode('utf-8')
+        encoded_message = json.dumps(self.generate_slack_message_v2()).encode('utf-8')
         return encoded_message
 
 
@@ -340,10 +371,11 @@ class DataHandler:
                 file_reader = csv.reader(kill_list_file, delimiter='\n')
                 for kill_id in file_reader:
                     self.kill_list.append(kill_id[0])
-# Needed to convert the Items in the list from Strings to Ints because csv.reader returns a list of Strings
+                # Needed to convert the Items in the list from Strings to Ints because csv.reader returns a list of Strings
                 self.kill_list = list(map(int, self.kill_list))
         except FileNotFoundError:
             print('recent_kill_id_list.csv now found\nUsing recent_kill\n')
             self.kill_list = [recent_kill]
+
 
 main()
