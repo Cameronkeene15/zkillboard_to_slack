@@ -4,6 +4,7 @@ import codecs
 import pprint
 import csv
 import re
+import configparser
 
 # for fixLazyJson
 import tokenize
@@ -38,6 +39,8 @@ def main():
     #     with open('json_info.txt', 'r') as json_file:
     #            response = json.loads(fixLazyJson(json_file.read()))
     if_new_kill = False
+    config_test = ConfigHandler()
+    config_test.generate_config_file()
     for kill_mail in response:
         kill = KillMail(kill_mail)
         if data.check_if_new_kill(kill):
@@ -361,7 +364,6 @@ class WebHandler:
         description_list = description_regex.findall(self.html)
         self.description = self.remove_total_value_from_title(description_list[0])
 
-
     def generate_zkillboard_url(self, data):
         url = 'https://zkillboard.com/api/'
         url += 'allianceID/' + str(alliance_id) + '/'
@@ -376,6 +378,18 @@ class WebHandler:
         print(title)
         return title
 
+
+class ConfigHandler:
+    def __init__(self):
+        self.config = configparser.ConfigParser()
+
+    def generate_config_file(self):
+        self.config['Settings'] = {'alliance_id': '',
+                                   'corporation_id': '',
+                                   'slack_web_hook': '',
+                                   'recent_kill_id': ''}
+        with open('Config.ini', 'w') as configfile:
+            self.config.write(configfile)
 
 
 main()
