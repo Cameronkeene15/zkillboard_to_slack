@@ -6,11 +6,17 @@ import csv
 import re
 import configparser
 import sys
+import os
 
 # for fixLazyJson
 import tokenize
 import token
 from io import *
+
+script_directory = os.path.dirname(os.path.realpath(__file__))
+config_file_path = os.path.join(script_directory, 'Config.ini')
+cache_file_path = os.path.join(script_directory, 'recent_kill_list.csv')
+type_id_path = os.path.join(script_directory, 'typeids.csv')
 
 
 def main():
@@ -106,12 +112,15 @@ class KillMail:
         return self.json_kill_mail['zkb']['totalValue']
 
     def get_ship_name(self):
-        cvs_file = csv.reader(codecs.open('typeids.csv', 'r', encoding='utf-8'))
-        for row in cvs_file:
-            if row[0] == str(self.json_kill_mail['victim']['shipTypeID']):
-                return row[1]
-        else:
-            return 'Item Name Unknown'
+        try:
+            cvs_file = csv.reader(codecs.open(type_id_path, 'r', encoding='utf-8'))
+            for row in cvs_file:
+                if row[0] == str(self.json_kill_mail['victim']['shipTypeID']):
+                    return row[1]
+            else:
+                return 'Item Name Unknown'
+        except:
+            print('Error Getting Ship Type')
 
 
 class SlackMessage:
@@ -247,7 +256,7 @@ class DataHandler:
 
     def write_kill_list_file(self):
         try:
-            with open('recent_kill_list.csv', 'w', newline='') as kill_list_file:
+            with open(cache_file_path, 'w', newline='') as kill_list_file:
                 writer = csv.writer(kill_list_file, delimiter='\n')
                 self.kill_list.sort(reverse=True)
                 while len(self.kill_list) > self.config.get_cache_size():
@@ -258,7 +267,7 @@ class DataHandler:
 
     def read_kill_list_file(self):
         try:
-            with open('recent_kill_list.csv', 'r', newline='') as kill_list_file:
+            with open(cache_file_path, 'r', newline='') as kill_list_file:
                 file_reader = csv.reader(kill_list_file, delimiter='\n')
                 for kill_id in file_reader:
                     self.kill_list.append(kill_id[0])
@@ -326,14 +335,14 @@ class ConfigHandler:
         self.config.set('Settings', 'cache_size', '10')
         self.config.set('Settings', 'recent_kill_id', '')
         try:
-            with open('Config.ini', 'w') as config_file:
+            with open(config_file_path, 'w') as config_file:
                 self.config.write(config_file)
         except:
             print('Error Generating Config File!')
 
     def read_config_file(self):
         try:
-            with open('Config.ini') as config_file:
+            with open(config_file_path) as config_file:
                 self.config.read_file(config_file)
         except FileNotFoundError:
             print('Could Not Find Config File\nGenerating Config File Now')
