@@ -347,16 +347,16 @@ class ConfigHandler:
         return self.config.get('Settings', 'slack_web_hook')
 
     def get_alliance_id(self):
-        return int(self.config.get('Settings', 'alliance_id'))
+        return int(float(self.config.get('Settings', 'alliance_id')))
 
     def get_corporation_id(self):
-        return int(self.config.get('Settings', 'corporation_id'))
+        return int(float(self.config.get('Settings', 'corporation_id')))
 
     def get_cache_size(self):
-        return int(self.config.get('Settings', 'cache_size'))
+        return int(float(self.config.get('Settings', 'cache_size')))
 
     def get_recent_kill(self):
-        return int(self.config.get('Settings', 'recent_kill_id'))
+        return int(float(self.config.get('Settings', 'recent_kill_id')))
 
 # Only used for testing to fix reading json data from saved file.
 def fixLazyJson(in_text):
