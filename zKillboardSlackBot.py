@@ -347,10 +347,10 @@ class ConfigHandler:
         return self.config.get('Settings', 'slack_web_hook')
 
     def get_alliance_id(self):
-        return self.config.get('Settings', 'alliance_id')
+        return int(self.config.get('Settings', 'alliance_id'))
 
     def get_corporation_id(self):
-        return self.config.get('Settings', 'corporation_id')
+        return int(self.config.get('Settings', 'corporation_id'))
 
     def get_cache_size(self):
         return int(self.config.get('Settings', 'cache_size'))
