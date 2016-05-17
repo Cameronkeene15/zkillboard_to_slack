@@ -32,7 +32,6 @@ def main():
         kill = KillMail(kill_mail)
         if data.check_if_new_kill(kill):
             if_new_kill = True
-            pprint.pformat(kill_mail)
             web_handler.get_html_page(kill)
             slack_message = SlackMessage(kill, web_handler, config)
             encoded_slack_message = slack_message.encode_slack_message()
@@ -247,13 +246,11 @@ class DataHandler:
             return True
 
     def write_kill_list_file(self):
-        print(self.kill_list)
         try:
             with open('recent_kill_list.csv', 'w', newline='') as kill_list_file:
                 writer = csv.writer(kill_list_file, delimiter='\n')
                 self.kill_list.sort(reverse=True)
                 while len(self.kill_list) > self.config.get_cache_size():
-                    print('removing: ' + str(self.kill_list[-1]))
                     del self.kill_list[-1]
                 writer.writerow(self.kill_list)
         except:
@@ -308,7 +305,6 @@ class WebHandler:
         url += 'allianceID/' + str(config.get_alliance_id()) + '/'
         url += 'afterKillID/' + str(min(data.get_kill_list())) + '/'
         url += 'no-items/no-attackers/'
-        print(url)
         return url
 
     def remove_total_value_from_title(self, title):
