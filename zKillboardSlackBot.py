@@ -13,6 +13,7 @@ import tokenize
 import token
 from io import *
 
+# Used so that the Config.ini and recent_kill_list.csv are always in the same location as the script
 script_directory = os.path.dirname(os.path.realpath(__file__))
 config_file_path = os.path.join(script_directory, 'Config.ini')
 cache_file_path = os.path.join(script_directory, 'recent_kill_list.csv')
@@ -135,23 +136,23 @@ class SlackMessage:
 
     def get_message_color(self):
         if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
-            color = '#ff0000'
+            color = self.config.get_slack_loss_color()
         else:
-            color = '#36a64f'
+            color = self.config.get_slack_kill_color()
         return color
 
     def get_message_icon_emoji(self):
         if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
-            icon_emoji = ':skull_and_crossbones:'
+            icon_emoji = self.config.get_slack_loss_emoji()
         else:
-            icon_emoji = ':sunglasses:'
+            icon_emoji = self.config.get_slack_kill_emoji()
         return icon_emoji
 
     def get_message_user_name(self):
         if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
-            user_name = 'Loss'
+            user_name = self.config.get_slack_loss_username()
         else:
-            user_name = 'Kill'
+            user_name = self.config.get_slack_kill_username()
         return user_name
 
     # Old format, decided to use V2 instead because it takes up less space and fields does not repeat the title.
@@ -236,11 +237,11 @@ class DataHandler:
     def get_cache_size(self):
         return self.config.get_cache_size()
 
+    def get_recent_kill_id(self):
+        return self.config.get_recent_kill()
+
     def get_kill_list(self):
         return self.kill_list
-
-    def set_kill_list(self, new_list):
-        self.kill_list = new_list
 
     def add_kill_id(self, kill_id):
         self.kill_list.append(kill_id)
@@ -259,7 +260,7 @@ class DataHandler:
             with open(cache_file_path, 'w', newline='') as kill_list_file:
                 writer = csv.writer(kill_list_file, delimiter='\n')
                 self.kill_list.sort(reverse=True)
-                while len(self.kill_list) > self.config.get_cache_size():
+                while len(self.kill_list) > self.get_cache_size():
                     del self.kill_list[-1]
                 writer.writerow(self.kill_list)
         except:
@@ -276,7 +277,7 @@ class DataHandler:
                 self.kill_list = list(map(int, self.kill_list))
         except FileNotFoundError:
             print('recent_kill_id_list.csv not found\nUsing recent_kill\n')
-            self.kill_list = [self.config.get_recent_kill()]
+            self.kill_list = [self.get_recent_kill_id()]
 
 
 class WebHandler:
@@ -328,12 +329,20 @@ class ConfigHandler:
         self.read_config_file()
 
     def generate_config_file(self):
-        self.config.add_section('Settings')
-        self.config.set('Settings', 'slack_web_hook', 'https://hooks.slack.com/services/')
-        self.config.set('Settings', 'alliance_id', '')
-        self.config.set('Settings', 'corporation_id', '')
-        self.config.set('Settings', 'cache_size', '10')
-        self.config.set('Settings', 'recent_kill_id', '')
+        self.config.add_section('General Settings')
+        self.config.set('General Settings', 'alliance_id', '')
+        self.config.set('General Settings', 'corporation_id', '')
+        self.config.set('General Settings', 'cache_size', '10')
+        self.config.set('General Settings', 'recent_kill_id', '')
+
+        self.config.add_section('Slack Settings')
+        self.config.set('Slack Settings', 'slack_web_hook', 'https://hooks.slack.com/services/')
+        self.config.set('Slack Settings', 'kill_username', 'Kill')
+        self.config.set('Slack Settings', 'kill_emoji', ':sunglasses:')
+        self.config.set('Slack Settings', 'kill_color', '#36a64f')
+        self.config.set('Slack Settings', 'loss_username', 'Loss')
+        self.config.set('Slack Settings', 'loss_emoji', ':skull_and_crossbones:')
+        self.config.set('Slack Settings', 'loss_color', '#ff0000')
         try:
             with open(config_file_path, 'w') as config_file:
                 self.config.write(config_file)
@@ -352,20 +361,78 @@ class ConfigHandler:
         except:
             print('Error Reading Config File!')
 
-    def get_slack_web_hook(self):
-        return self.config.get('Settings', 'slack_web_hook')
-
     def get_alliance_id(self):
-        return int(float(self.config.get('Settings', 'alliance_id')))
+        try:
+            return int(self.config.get('General Settings', 'alliance_id'))
+        except:
+            return 0
 
     def get_corporation_id(self):
-        return int(float(self.config.get('Settings', 'corporation_id')))
+        try:
+            return int(self.config.get('General Settings', 'corporation_id'))
+        except:
+            return 0
 
     def get_cache_size(self):
-        return int(float(self.config.get('Settings', 'cache_size')))
+        try:
+            return int(self.config.get('General Settings', 'cache_size'))
+        except:
+            return 10
 
     def get_recent_kill(self):
-        return int(float(self.config.get('Settings', 'recent_kill_id')))
+        try:
+            return int(self.config.get('General Settings', 'recent_kill_id'))
+        except:
+            print('Error Getting recent_kill_id From Config.ini')
+            sys.exit()
+
+    def get_slack_web_hook(self):
+        try:
+            return self.config.get('Slack Settings', 'slack_web_hook')
+        except:
+            print('Error Getting slack_web_hook From Config.ini')
+            sys.exit()
+
+    def get_slack_kill_username(self):
+        try:
+            return self.config.get('Slack Settings', 'kill_username')
+        except:
+            print('Error Getting kill_username From Config.ini')
+            sys.exit()
+
+    def get_slack_kill_emoji(self):
+        try:
+            return self.config.get('Slack Settings', 'kill_emoji')
+        except:
+            print('Error Getting kill_emoji From Config.ini')
+            sys.exit()
+
+    def get_slack_kill_color(self):
+        try:
+            return self.config.get('Slack Settings', 'kill_color')
+        except:
+            print('Error Getting kill_color From Config.ini')
+            sys.exit()
+
+    def get_slack_loss_username(self):
+        try:
+            return self.config.get('Slack Settings', 'loss_username')
+        except:
+            print('Error Getting loss_username From Config.ini')
+            sys.exit()
+
+    def get_slack_loss_emoji(self):
+        try:
+            return self.config.get('Slack Settings', 'loss_emoji')
+        except:
+            print('Error Getting loss_emoji From Config.ini')
+            sys.exit()
+
+    def get_slack_loss_color(self):
+        try:
+            return self.config.get('Slack Settings', 'loss_color')
+        except:
+            print('Error Getting loss_color From Config.ini')
 
 # Only used for testing to fix reading json data from saved file.
 def fixLazyJson(in_text):
