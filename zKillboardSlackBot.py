@@ -23,7 +23,6 @@ type_id_path = os.path.join(script_directory, 'typeids.csv')
 def main():
     config = ConfigHandler()
     data = DataHandler(config)
-    data.read_kill_list_file()
     web_handler = WebHandler()
     url = web_handler.generate_zkillboard_url(data, config)
     reader = codecs.getreader('utf-8')
@@ -233,6 +232,7 @@ class DataHandler:
     def __init__(self, config):
         self.kill_list = []
         self.config = config
+        self.read_kill_list_file()
 
     def get_cache_size(self):
         return self.config.get_cache_size()
