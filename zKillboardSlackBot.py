@@ -1,9 +1,7 @@
-import urllib.request
+import requests
 import json
-import codecs
 import pprint
 import csv
-import re
 import configparser
 import sys
 import os
@@ -16,35 +14,26 @@ from io import *
 # Used so that the Config.ini and recent_kill_list.csv are always in the same location as the script
 script_directory = os.path.dirname(os.path.realpath(__file__))
 config_file_path = os.path.join(script_directory, 'Config.ini')
-cache_file_path = os.path.join(script_directory, 'recent_kill_list.csv')
-type_id_path = os.path.join(script_directory, 'typeids.csv')
 
 
 def main():
-    config = ConfigHandler()
-    data = DataHandler(config)
-    web_handler = WebHandler()
-    url = web_handler.generate_zkillboard_url(data, config)
-    reader = codecs.getreader('utf-8')
-    response = json.load(reader(urllib.request.urlopen(url)))
-    # Used for testing. To save Json data from zKillboard, then read from it when testing.
-    # Helps to not spam request to zKillboard
-    #    with open('json_info.txt', 'w') as json_file:
-    #        json_file.write(pprint.pformat(response))
-    #     with open('json_info.txt', 'r') as json_file:
-    #            response = json.loads(fixLazyJson(json_file.read()))
-    if_new_kill = False
-    for kill_mail in response:
-        kill = KillMail(kill_mail)
-        if data.check_if_new_kill(kill):
-            if_new_kill = True
-            web_handler.get_html_page(kill)
-            slack_message = SlackMessage(kill, web_handler, config)
-            encoded_slack_message = slack_message.encode_slack_message()
-            urllib.request.urlopen(config.get_slack_web_hook(), encoded_slack_message)
-            data.add_kill_id(kill.get_kill_id())
-    if if_new_kill:
-        data.write_kill_list_file()
+    config = ConfigHandler()                                                # sets up a config object
+    killmail = True
+
+    while(killmail != None):
+        response = requests.get('https://redisq.zkillboard.com/listen.php')     # gets a killmail from zkillboard
+        response.encoding = 'utf-8'                                             # sets encoding to UTF-8
+        json_data = response.json()                                             # gets the json data in the response
+
+        killmail = json_data['package']
+
+        kill = KillMail(killmail)
+
+        slack_message = SlackMessage(kill, config)
+        encoded_slack_message = slack_message.encode_slack_message()
+        requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
+
+
 
 
 class KillMail:
@@ -128,10 +117,6 @@ class SlackMessage:
         self.kill = kill
         self.web_handler = web_handler
         self.config = config
-
-    def get_kill_link(self):
-        kill_link = 'https://zkillboard.com/kill/' + str(self.kill.get_kill_id())
-        return kill_link
 
     def get_message_color(self):
         if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
@@ -228,101 +213,6 @@ class SlackMessage:
         return encoded_message
 
 
-class DataHandler:
-    def __init__(self, config):
-        self.kill_list = []
-        self.config = config
-        self.read_kill_list_file()
-
-    def get_cache_size(self):
-        return self.config.get_cache_size()
-
-    def get_recent_kill_id(self):
-        return self.config.get_recent_kill()
-
-    def get_kill_list(self):
-        return self.kill_list
-
-    def add_kill_id(self, kill_id):
-        self.kill_list.append(kill_id)
-
-    def check_if_new_kill(self, kill):
-        kill_list = self.get_kill_list()
-        for kill_id in kill_list:
-            if str(kill.get_kill_id()) == str(kill_id):
-                return False
-
-        else:
-            return True
-
-    def write_kill_list_file(self):
-        try:
-            with open(cache_file_path, 'w', newline='') as kill_list_file:
-                writer = csv.writer(kill_list_file, delimiter='\n')
-                self.kill_list.sort(reverse=True)
-                while len(self.kill_list) > self.get_cache_size():
-                    del self.kill_list[-1]
-                writer.writerow(self.kill_list)
-        except:
-            print('Error writing recent_kill_list.csv')
-
-    def read_kill_list_file(self):
-        try:
-            with open(cache_file_path, 'r', newline='') as kill_list_file:
-                file_reader = csv.reader(kill_list_file, delimiter='\n')
-                for kill_id in file_reader:
-                    self.kill_list.append(kill_id[0])
-                # Needed to convert the items in the list from Strings to Ints because csv.reader returns a
-                # list of Strings
-                self.kill_list = list(map(int, self.kill_list))
-        except FileNotFoundError:
-            print('recent_kill_id_list.csv not found\nUsing recent_kill\n')
-            self.kill_list = [self.get_recent_kill_id()]
-
-
-class WebHandler:
-    def __init__(self):
-        self.image_url = ''
-        self.description = ''
-        self.html = ''
-
-    def get_image_url(self):
-        self.find_image_url()
-        return self.image_url
-
-    def get_description(self):
-        self.find_description()
-        return self.description
-
-    def get_html_page(self, kill):
-        url = 'https://zkillboard.com/kill/' + str(kill.get_kill_id())
-        reader = codecs.getreader('utf-8')
-        html = reader(urllib.request.urlopen(url))
-        self.html = html.read()
-
-    def find_image_url(self):
-        image_regex = re.compile('<meta\sname=["\']og:image["\']\scontent=["\'](.*?)["\']>')
-        image_list = image_regex.findall(self.html)
-        self.image_url = image_list[0]
-
-    def find_description(self):
-        description_regex = re.compile('<meta\sname=["\']og:description["\']\scontent=["\'](.*?)["\']>')
-        description_list = description_regex.findall(self.html)
-        self.description = self.remove_total_value_from_title(description_list[0])
-
-    def generate_zkillboard_url(self, data, config):
-        url = 'https://zkillboard.com/api/'
-        url += 'allianceID/' + str(config.get_alliance_id()) + '/'
-        url += 'afterKillID/' + str(min(data.get_kill_list())) + '/'
-        url += 'no-items/no-attackers/'
-        return url
-
-    def remove_total_value_from_title(self, title):
-        if ' Total Value:' in title:
-            title = title[:title.find(' Total Value:')]
-        return title
-
-
 class ConfigHandler:
     def __init__(self):
         self.config = configparser.ConfigParser()
@@ -332,8 +222,6 @@ class ConfigHandler:
         self.config.add_section('General Settings')
         self.config.set('General Settings', 'alliance_id', '')
         self.config.set('General Settings', 'corporation_id', '')
-        self.config.set('General Settings', 'cache_size', '10')
-        self.config.set('General Settings', 'recent_kill_id', '')
 
         self.config.add_section('Slack Settings')
         self.config.set('Slack Settings', 'slack_web_hook', 'https://hooks.slack.com/services/')
@@ -372,19 +260,6 @@ class ConfigHandler:
             return int(self.config.get('General Settings', 'corporation_id'))
         except:
             return 0
-
-    def get_cache_size(self):
-        try:
-            return int(self.config.get('General Settings', 'cache_size'))
-        except:
-            return 10
-
-    def get_recent_kill(self):
-        try:
-            return int(self.config.get('General Settings', 'recent_kill_id'))
-        except:
-            print('Error Getting recent_kill_id From Config.ini')
-            sys.exit()
 
     def get_slack_web_hook(self):
         try:
@@ -434,35 +309,5 @@ class ConfigHandler:
         except:
             print('Error Getting loss_color From Config.ini')
 
-# Only used for testing to fix reading json data from saved file.
-def fixLazyJson(in_text):
-    tokengen = tokenize.generate_tokens(StringIO(in_text).readline)
-
-    result = []
-    for tokid, tokval, _, _, _ in tokengen:
-        # fix unquoted strings
-        if (tokid == token.NAME):
-            if tokval not in ['true', 'false', 'null', '-Infinity', 'Infinity', 'NaN']:
-                tokid = token.STRING
-                tokval = u'"%s"' % tokval
-
-        # fix single-quoted strings
-        elif (tokid == token.STRING):
-            if tokval.startswith("'"):
-                tokval = u'"%s"' % tokval[1:-1].replace('"', '\\"')
-
-        # remove invalid commas
-        elif (tokid == token.OP) and ((tokval == '}') or (tokval == ']')):
-            if (len(result) > 0) and (result[-1][1] == ','):
-                result.pop()
-
-        # fix single-quoted strings
-        elif (tokid == token.STRING):
-            if tokval.startswith("'"):
-                tokval = u'"%s"' % tokval[1:-1].replace('"', '\\"')
-
-        result.append((tokid, tokval))
-
-    return tokenize.untokenize(result)
 
 main()
