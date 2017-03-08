@@ -16,6 +16,8 @@ script_directory = os.path.dirname(os.path.realpath(__file__))
 config_file_path = os.path.join(script_directory, 'Config.ini')
 
 
+# TODO: create a class to handle web links such as link to zkillboard to show kill/loss
+
 def main():
     config = ConfigHandler()                                                # sets up a config object
     killmail = True
@@ -34,9 +36,11 @@ def main():
         requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
 
 
+# Class KillMail allows for easy reading of the json data that is returned from the request.
 class KillMail:
     def __init__(self, json_kill_mail):
         self.json_kill_mail = json_kill_mail
+        self.final_blow_attacker = self.get_final_blow_info()
 
     def get_kill_id(self):
         return self.json_kill_mail['killID']
@@ -47,16 +51,27 @@ class KillMail:
     def get_attackers_info(self):
         return self.json_kill_mail['killmail']['attackers']
 
+    def get_final_blow_info(self):
+        # TODO: get the info of the attacker with final blow
+
+        return None
+
+    def get_final_blow_name(self):
+        return self.final_blow_attacker['character']['name']
+
+    def get_final_blow_ship(self):
+        return self.final_blow_attacker['shipType']['name']
+
     def get_kill_time(self):
         return self.json_kill_mail['killmail']['killTime']
 
-    def get_solar_system_info(self):
-        return self.json_kill_mail['killmail']['solarSystem']
+    def get_solar_system_name(self):
+        return self.json_kill_mail['killmail']['solarSystem']['name']
 
-    def get_victim_id(self):
+    def get_victim_character_id(self):
         return self.json_kill_mail['killmail']['victim']['character']['id']
 
-    def get_victim_name(self):
+    def get_victim_character_name(self):
         return self.json_kill_mail['killmail']['victim']['character']['name']
 
     def get_victim_alliance_id(self):
@@ -71,11 +86,25 @@ class KillMail:
     def get_victim_corporation_name(self):
         return self.json_kill_mail['killmail']['victim']['corporation']['name']
 
+    def get_victim_damage_taken(self):
+        return self.json_kill_mail['killmail']['victim']['damageTaken']
 
+    def get_victim_ship_icon(self):
+        icon_url = self.json_kill_mail['killmail']['victim']['shipType']['icon']['href']
+        # TODO: use regex to change Type in url to Render
+
+    def get_victim_ship_name(self):
+        return self.json_kill_mail['killmail']['victim']['shipType']['name']
+
+    def get_killmail_value(self):
+        return self.json_kill_mail['zkb']['totalValue']
+
+
+# Class SlackMessage handles putting all the necessary information into the formatted slack message per killmail.
+# TODO: maybe move the message color,icon, and name into one def so that it is only determined once/looks cleaner
 class SlackMessage:
     def __init__(self, kill, config):
         self.kill = kill
-        self.web_handler = web_handler
         self.config = config
 
     def get_message_color(self):
@@ -173,6 +202,8 @@ class SlackMessage:
         return encoded_message
 
 
+# Class ConfigHandler handles generating the config file if there is not one.
+# It also handles the opening of the file and reading of settings from it.
 class ConfigHandler:
     def __init__(self):
         self.config = configparser.ConfigParser()
