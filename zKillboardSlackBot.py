@@ -20,7 +20,7 @@ def main():
     config = ConfigHandler()                                                # sets up a config object
     killmail = True
 
-    while(killmail != None):
+    while killmail != None:
         response = requests.get('https://redisq.zkillboard.com/listen.php')     # gets a killmail from zkillboard
         response.encoding = 'utf-8'                                             # sets encoding to UTF-8
         json_data = response.json()                                             # gets the json data in the response
@@ -34,8 +34,6 @@ def main():
         requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
 
 
-
-
 class KillMail:
     def __init__(self, json_kill_mail):
         self.json_kill_mail = json_kill_mail
@@ -43,77 +41,39 @@ class KillMail:
     def get_kill_id(self):
         return self.json_kill_mail['killID']
 
+    def get_attacker_count(self):
+        return self.json_kill_mail['killmail']['attackerCount']
+
+    def get_attackers_info(self):
+        return self.json_kill_mail['killmail']['attackers']
+
     def get_kill_time(self):
-        return self.json_kill_mail['killTime']
+        return self.json_kill_mail['killmail']['killTime']
 
-    def get_moon_id(self):
-        return self.json_kill_mail['moonID']
+    def get_solar_system_info(self):
+        return self.json_kill_mail['killmail']['solarSystem']
 
-    def get_position(self):
-        return self.json_kill_mail['position']
+    def get_victim_id(self):
+        return self.json_kill_mail['killmail']['victim']['character']['id']
 
-    def get_solar_system_id(self):
-        return self.json_kill_mail['solarSystemID']
+    def get_victim_name(self):
+        return self.json_kill_mail['killmail']['victim']['character']['name']
 
     def get_victim_alliance_id(self):
-        return self.json_kill_mail['victim']['allianceID']
+        return self.json_kill_mail['killmail']['victim']['alliance']['id']
 
     def get_victim_alliance_name(self):
-        return self.json_kill_mail['victim']['allianceName']
-
-    def get_victim_character_id(self):
-        return self.json_kill_mail['victim']['characterID']
-
-    def get_victim_character_name(self):
-        return self.json_kill_mail['victim']['characterName']
+        return self.json_kill_mail['killmail']['victim']['alliance']['name']
 
     def get_victim_corporation_id(self):
-        return self.json_kill_mail['victim']['corporationID']
+        return self.json_kill_mail['killmail']['victim']['corporation']['id']
 
     def get_victim_corporation_name(self):
-        return self.json_kill_mail['victim']['corporationName']
-
-    def get_damage_taken(self):
-        return self.json_kill_mail['victim']['damageTaken']
-
-    def get_faction_id(self):
-        return self.json_kill_mail['victim']['factionID']
-
-    def get_faction_name(self):
-        return self.json_kill_mail['victim']['factionName']
-
-    def get_ship_id(self):
-        return self.json_kill_mail['victim']['shipTypeID']
-
-    def get_zkb_hash(self):
-        return self.json_kill_mail['zkb']['hash']
-
-    def get_number_involved(self):
-        return self.json_kill_mail['zkb']['involved']
-
-    def get_location_id(self):
-        return self.json_kill_mail['zkb']['locationID']
-
-    def get_points(self):
-        return self.json_kill_mail['zkb']['points']
-
-    def get_kill_value(self):
-        return self.json_kill_mail['zkb']['totalValue']
-
-    def get_ship_name(self):
-        try:
-            cvs_file = csv.reader(codecs.open(type_id_path, 'r', encoding='utf-8'))
-            for row in cvs_file:
-                if row[0] == str(self.json_kill_mail['victim']['shipTypeID']):
-                    return row[1]
-            else:
-                return 'Item Name Unknown'
-        except:
-            print('Error Getting Ship Type')
+        return self.json_kill_mail['killmail']['victim']['corporation']['name']
 
 
 class SlackMessage:
-    def __init__(self, kill, web_handler, config):
+    def __init__(self, kill, config):
         self.kill = kill
         self.web_handler = web_handler
         self.config = config
