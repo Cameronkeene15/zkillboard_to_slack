@@ -53,15 +53,21 @@ class KillMail:
         return self.json_kill_mail['killmail']['attackers']
 
     def get_final_blow_info(self):
-        # TODO: get the info of the attacker with final blow
-        return
+        for attacker in self.get_attackers_info():
+            if attacker['finalBlow']:
+                return attacker
 
     def get_final_blow_name(self):
         return self.final_blow_attacker['character']['name']
 
     def get_top_damage_info(self):
-        # TODO: get top damage info
-        return
+        top_damage = 0
+        top_damage_info = None
+        for attacker in self.get_attackers_info():
+            if top_damage < attacker['damageDone']:
+                top_damage = attacker['damageDone']
+                top_damage_info = attacker
+        return top_damage_info
 
     def get_top_damage_name(self):
         return self.top_damage_attacker['character']['name']
