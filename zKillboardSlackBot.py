@@ -41,6 +41,7 @@ class KillMail:
     def __init__(self, json_kill_mail):
         self.json_kill_mail = json_kill_mail
         self.final_blow_attacker = self.get_final_blow_info()
+        self.top_damage_attacker = self.get_top_damage_info()
 
     def get_kill_id(self):
         return self.json_kill_mail['killID']
@@ -53,14 +54,17 @@ class KillMail:
 
     def get_final_blow_info(self):
         # TODO: get the info of the attacker with final blow
-
-        return None
+        return
 
     def get_final_blow_name(self):
         return self.final_blow_attacker['character']['name']
 
-    def get_final_blow_ship(self):
-        return self.final_blow_attacker['shipType']['name']
+    def get_top_damage_info(self):
+        # TODO: get top damage info
+        return
+
+    def get_top_damage_name(self):
+        return self.top_damage_attacker['character']['name']
 
     def get_kill_time(self):
         return self.json_kill_mail['killmail']['killTime']
@@ -128,6 +132,14 @@ class SlackMessage:
             user_name = self.config.get_slack_kill_username()
         return user_name
 
+    def get_kill_description(self):
+        # TODO: generate title for message
+        return
+
+    def get_kill_link(self):
+        # TODO: build url for kill link to zkillboard
+        return
+
     # Old format, decided to use V2 instead because it takes up less space and fields does not repeat the title.
     def generate_slack_message(self):
         slack_message = {
@@ -166,6 +178,7 @@ class SlackMessage:
                         }
                     ],
                     "thumb_url": self.web_handler.get_image_url(),
+                    "fallback": "New Killmail!",
                 }
             ],
             "icon_emoji": self.get_message_icon_emoji()
