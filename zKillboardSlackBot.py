@@ -20,20 +20,35 @@ config_file_path = os.path.join(script_directory, 'Config.ini')
 
 def main():
     config = ConfigHandler()                                                # sets up a config object
-    killmail = True
+    killmail_status = 0
+
+    response = requests.get('https://redisq.zkillboard.com/listen.php')
+    response.encoding = 'utf-8'
+    json_data = response.json()
+    killmail = json_data['package']
+
 
     while killmail != None:
-        response = requests.get('https://redisq.zkillboard.com/listen.php')     # gets a killmail from zkillboard
-        response.encoding = 'utf-8'                                             # sets encoding to UTF-8
-        json_data = response.json()                                             # gets the json data in the response
-
-        killmail = json_data['package']
-
         kill = KillMail(killmail)
 
-        slack_message = SlackMessage(kill, config)
-        encoded_slack_message = slack_message.encode_slack_message()
-        requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
+        for attacker in kill.get_attackers_info():
+            if attacker['alliance']['id'] == config.get_alliance_id() or attacker['corporation']['id'] == config.get_corporation_id():
+                killmail_status = 1
+
+        if killmail.get_victim_alliance_id() == config.get_alliance_id() or killmail.get_victim_corporation_id() == config.get_corporation_id():
+            killmail_status = 2
+
+        if killmail_status > 0:
+            slack_message = SlackMessage(kill, config)
+            encoded_slack_message = slack_message.encode_slack_message()
+            requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
+
+
+
+        response = requests.get('https://redisq.zkillboard.com/listen.php')
+        json_data = response.json()                                             # gets the json data in the response
+        killmail = json_data['package']
+
 
 
 # Class KillMail allows for easy reading of the json data that is returned from the request.
@@ -117,6 +132,16 @@ class SlackMessage:
         self.kill = kill
         self.config = config
 
+    def determine_if_kill(self):
+        is_kill = None
+        for attacker in self.kill.get_attackers_info():
+            if attacker['alliance']['id'] == self.config.get_alliance_id() or attacker['corporation']['id'] == self.config.get_corporation_id():
+                is_kill = True
+        if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id:
+
+        return is_kill
+
+
     def get_message_color(self):
         if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
             color = self.config.get_slack_loss_color()
@@ -152,7 +177,7 @@ class SlackMessage:
             "username": self.get_message_user_name(),
             "attachments": [
                 {
-                    "title": self.web_handler.get_description(),
+                    "title": self.get_kill_description(),
                     "title_link": self.get_kill_link(),
                     "color": self.get_message_color(),
                     "fields": [
@@ -183,7 +208,7 @@ class SlackMessage:
                             "short": False
                         }
                     ],
-                    "thumb_url": self.web_handler.get_image_url(),
+                    "thumb_url": self.kill.get_victim_ship_icon(),
                     "fallback": "New Killmail!",
                 }
             ],
@@ -198,7 +223,7 @@ class SlackMessage:
             "username": self.get_message_user_name(),
             "attachments": [
                 {
-                    "title": self.web_handler.get_description(),
+                    "title": self.get_kill_description(),
                     "title_link": self.get_kill_link(),
                     "color": self.get_message_color(),
                     "fields": [
@@ -208,7 +233,7 @@ class SlackMessage:
                             "short": False
                         }
                     ],
-                    "thumb_url": self.web_handler.get_image_url(),
+                    "thumb_url": self.kill.get_victim_ship_icon(),
                     "fallback": "New Killmail!",
                 }
             ],
