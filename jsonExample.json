@@ -96,7 +96,7 @@
                                          'finalBlow': True,
                                          'securityStatus': -2.3,
                                          'shipType': {'href': 'https://crest-tq.eveonline.com/inventory/types/37455/',
-                                                      'icon': {'href': 'http://imageserver.eveonline.com/Type/37455_128.png'},
+                                                      'icon': {'href': 'q'},
                                                       'id': 37455,
                                                       'id_str': '37455',
                                                       'name': 'Griffin Navy '

@@ -23,7 +23,7 @@ def main():
     config = ConfigHandler()                                                # sets up a config object
     killmail_status = 0
 
-    response = requests.get('https://redisq.zkillboard.com/listen.php')
+    response = requests.get('https://redisq.zkillboard.com/listen.php?queID=testRunning')
     print('get status: ' + str(response.status_code))
     response.encoding = 'utf-8'
     json_data = response.json()
@@ -70,7 +70,7 @@ class KillMail:
         self.final_blow_attacker = self.get_final_blow_info()
         self.top_damage_attacker = self.get_top_damage_info()
 
-    def get_kill_id(self):
+    def get_killmail_id(self):
         return self.json_kill_mail['killID']
 
     def get_attacker_count(self):
@@ -176,11 +176,11 @@ class SlackMessage:
         return user_name
 
     def get_kill_description(self):
-        description = self.kill.get_victim_character_name() + ' lost their ' + self.kill.get_ship_name() + ' in ' + self.kill.get_solar_system_name()
+        description = self.kill.get_victim_character_name() + ' lost their ' + self.kill.get_victim_ship_name() + ' in ' + self.kill.get_solar_system_name()
         return description
 
     def get_kill_link(self):
-        url = 'http://www.zkillboard.com/kill/' + str(self.kill.get_kill_id()) + '/'
+        url = 'http://www.zkillboard.com/kill/' + str(self.kill.get_killmail_id()) + '/'
         return url
 
     # Old format, decided to use V2 instead because it takes up less space and fields does not repeat the title.
@@ -216,7 +216,7 @@ class SlackMessage:
                         },
                         {
                             "title": "Total Value",
-                            "value": ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
+                            "value": ('{:,.2f}'.format(self.kill.get_killmail_value()) + ' ISK'),
                             "short": False
                         }
                     ],
@@ -241,7 +241,7 @@ class SlackMessage:
                     "fields": [
                         {
                             "title": "Total Value",
-                            "value": ('{:,.2f}'.format(self.kill.get_kill_value()) + ' ISK'),
+                            "value": ('{:,.2f}'.format(self.kill.get_killmail_value()) + ' ISK'),
                             "short": False
                         }
                     ],
