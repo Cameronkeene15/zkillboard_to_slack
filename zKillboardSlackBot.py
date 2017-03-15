@@ -5,6 +5,7 @@ import csv
 import configparser
 import sys
 import os
+import re
 
 # for fixLazyJson
 import tokenize
@@ -23,6 +24,7 @@ def main():
     killmail_status = 0
 
     response = requests.get('https://redisq.zkillboard.com/listen.php')
+    print('get status: ' + str(response.status_code))
     response.encoding = 'utf-8'
     json_data = response.json()
     killmail = json_data['package']
@@ -32,23 +34,33 @@ def main():
         kill = KillMail(killmail)
 
         for attacker in kill.get_attackers_info():
-            if attacker['alliance']['id'] == config.get_alliance_id() or attacker['corporation']['id'] == config.get_corporation_id():
-                killmail_status = 1
+            print(attacker)
+            try:
+                if attacker['corporation']['id'] == config.get_corporation_id():
+                    killmail_status = 1
+                    print('set killstatus to 1')
+            except:
+                print('no corp')
 
-        if killmail.get_victim_alliance_id() == config.get_alliance_id() or killmail.get_victim_corporation_id() == config.get_corporation_id():
-            killmail_status = 2
-
+        try:
+            if kill.get_victim_corporation_id() == config.get_corporation_id():
+                print('set killstatus to 2')
+                killmail_status = 2
+        except:
+            print('err')
+        print('killmail status: ' + str(killmail_status))
         if killmail_status > 0:
             slack_message = SlackMessage(kill, config)
             encoded_slack_message = slack_message.encode_slack_message()
-            requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
+            request_status = requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
 
-
+            print('posted killmail')
+            killmail_status = 0
 
         response = requests.get('https://redisq.zkillboard.com/listen.php')
+        print('get status: ' + str(response.status_code))
         json_data = response.json()                                             # gets the json data in the response
         killmail = json_data['package']
-
 
 
 # Class KillMail allows for easy reading of the json data that is returned from the request.
@@ -116,7 +128,8 @@ class KillMail:
 
     def get_victim_ship_icon(self):
         icon_url = self.json_kill_mail['killmail']['victim']['shipType']['icon']['href']
-        # TODO: use regex to change Type in url to Render
+        fixed_url = re.sub(r'Type', 'Render', icon_url)
+        return fixed_url
 
     def get_victim_ship_name(self):
         return self.json_kill_mail['killmail']['victim']['shipType']['name']
@@ -135,41 +148,40 @@ class SlackMessage:
     def determine_if_kill(self):
         is_kill = None
         for attacker in self.kill.get_attackers_info():
-            if attacker['alliance']['id'] == self.config.get_alliance_id() or attacker['corporation']['id'] == self.config.get_corporation_id():
+            if attacker['corporation']['id'] == self.config.get_corporation_id():
                 is_kill = True
-        if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id:
-
+        if self.config.get_corporation_id() == self.kill.get_victim_corporation_id:
+            is_kill = False
         return is_kill
 
-
     def get_message_color(self):
-        if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
+        if self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
             color = self.config.get_slack_loss_color()
         else:
             color = self.config.get_slack_kill_color()
         return color
 
     def get_message_icon_emoji(self):
-        if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
+        if self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
             icon_emoji = self.config.get_slack_loss_emoji()
         else:
             icon_emoji = self.config.get_slack_kill_emoji()
         return icon_emoji
 
     def get_message_user_name(self):
-        if self.config.get_alliance_id() == self.kill.get_victim_alliance_id() or self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
+        if self.config.get_corporation_id() == self.kill.get_victim_corporation_id():
             user_name = self.config.get_slack_loss_username()
         else:
             user_name = self.config.get_slack_kill_username()
         return user_name
 
     def get_kill_description(self):
-        # TODO: generate title for message
-        return
+        description = self.kill.get_victim_character_name() + ' lost their ' + self.kill.get_ship_name() + ' in ' + self.kill.get_solar_system_name()
+        return description
 
     def get_kill_link(self):
-        # TODO: build url for kill link to zkillboard
-        return
+        url = 'http://www.zkillboard.com/kill/' + str(self.kill.get_kill_id()) + '/'
+        return url
 
     # Old format, decided to use V2 instead because it takes up less space and fields does not repeat the title.
     def generate_slack_message(self):
