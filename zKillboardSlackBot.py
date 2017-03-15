@@ -194,24 +194,14 @@ class SlackMessage:
                     "color": self.get_message_color(),
                     "fields": [
                         {
-                            "title": "Date",
-                            "value": self.kill.get_kill_time(),
+                            "title": "Final Blow",
+                            "value": self.kill.get_final_blow_name(),
                             "short": True
 
                         },
                         {
-                            "title": "Ship Name",
-                            "value": self.kill.get_ship_name(),
-                            "short": True
-                        },
-                        {
-                            "title": "Pilot Name",
-                            "value": self.kill.get_victim_character_name(),
-                            "short": True
-                        },
-                        {
-                            "title": "Corporation Name",
-                            "value": self.kill.get_victim_corporation_name(),
+                            "title": "Top Damage",
+                            "value": self.kill.get_top_damage_name(),
                             "short": True
                         },
                         {
@@ -254,7 +244,7 @@ class SlackMessage:
         return slack_message
 
     def encode_slack_message(self):
-        encoded_message = json.dumps(self.generate_slack_message_v2()).encode('utf-8')
+        encoded_message = json.dumps(self.generate_slack_message()).encode('utf-8')
         return encoded_message
 
 
