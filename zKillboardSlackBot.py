@@ -6,6 +6,7 @@ import configparser
 import sys
 import os
 import re
+import pprint
 
 
 # Used so that the Config.ini and recent_kill_list.csv are always in the same location as the script
@@ -81,7 +82,9 @@ class KillMail:
         try:
             return self.final_blow_attacker['character']['name']
         except:
-            print('Final Blow name error : \n\n' + str(self.json_kill_mail) + '\n\n')
+            print('Final Blow name error : \n\n')
+            pprint.pprint(self.json_kill_mail)
+            print()
             return '$No Name$'
 
     def get_top_damage_info(self):
@@ -97,7 +100,9 @@ class KillMail:
         try:
             return self.top_damage_attacker['character']['name']
         except:
-            print('Top damage name error : \n\n' + str(self.json_kill_mail) + '\n\n')
+            print('Top damage name error : \n\n')
+            pprint.pprint(self.json_kill_mail)
+            print()
             return '$No Name$'
 
 
@@ -114,7 +119,9 @@ class KillMail:
         try:
             return self.json_kill_mail['killmail']['victim']['character']['name']
         except:
-            print('killamil data with no char name error : \n\n' + str(self.json_kill_mail) + '\n\n')
+            print('killamil data with no victim char name error : \n\n')
+            pprint.pprint(self.json_kill_mail)
+            print()
             return '$No Name$'
 
     def get_victim_alliance_id(self):
