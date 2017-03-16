@@ -32,17 +32,17 @@ def main():
             try:
                 if attacker['corporation']['id'] == config.get_corporation_id():
                     killmail_status = 1
-                    print('set killstatus to 1')
+                    #print('set killstatus to 1')
             except:
                 print('', end='')
 
         try:
             if kill.get_victim_corporation_id() == config.get_corporation_id():
-                print('set killstatus to 2')
+                #print('set killstatus to 2')
                 killmail_status = 2
         except:
             print('', end='')
-        print('killmail status: ' + str(killmail_status))
+        #print('killmail status: ' + str(killmail_status))
         if killmail_status > 0:
             slack_message = SlackMessage(kill, config)
             encoded_slack_message = slack_message.encode_slack_message()
@@ -78,7 +78,11 @@ class KillMail:
                 return attacker
 
     def get_final_blow_name(self):
-        return self.final_blow_attacker['character']['name']
+        try:
+            return self.final_blow_attacker['character']['name']
+        except:
+            print('Final Blow name error : \n\n' + str(self.json_kill_mail) + '\n\n')
+            return '$No Name$'
 
     def get_top_damage_info(self):
         top_damage = 0
@@ -90,7 +94,12 @@ class KillMail:
         return top_damage_info
 
     def get_top_damage_name(self):
-        return self.top_damage_attacker['character']['name']
+        try:
+            return self.top_damage_attacker['character']['name']
+        except:
+            print('Top damage name error : \n\n' + str(self.json_kill_mail) + '\n\n')
+            return '$No Name$'
+
 
     def get_kill_time(self):
         return self.json_kill_mail['killmail']['killTime']
@@ -102,7 +111,11 @@ class KillMail:
         return self.json_kill_mail['killmail']['victim']['character']['id']
 
     def get_victim_character_name(self):
-        return self.json_kill_mail['killmail']['victim']['character']['name']
+        try:
+            return self.json_kill_mail['killmail']['victim']['character']['name']
+        except:
+            print('killamil data with no char name error : \n\n' + str(self.json_kill_mail) + '\n\n')
+            return '$No Name$'
 
     def get_victim_alliance_id(self):
         return self.json_kill_mail['killmail']['victim']['alliance']['id']
