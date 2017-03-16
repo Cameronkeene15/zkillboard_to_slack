@@ -2,17 +2,11 @@
 
 import requests
 import json
-import pprint
-import csv
 import configparser
 import sys
 import os
 import re
 
-# for fixLazyJson
-import tokenize
-import token
-from io import *
 
 # Used so that the Config.ini and recent_kill_list.csv are always in the same location as the script
 script_directory = os.path.dirname(os.path.realpath(__file__))
@@ -25,8 +19,7 @@ def main():
     config = ConfigHandler()                                                # sets up a config object
     killmail_status = 0
 
-    response = requests.get('https://redisq.zkillboard.com/listen.php?queID=testRunning')
-    print('get status: ' + str(response.status_code))
+    response = requests.get('https://redisq.zkillboard.com/listen.php?queID=testRunning1')
     response.encoding = 'utf-8'
     json_data = response.json()
     killmail = json_data['package']
@@ -36,20 +29,19 @@ def main():
         kill = KillMail(killmail)
 
         for attacker in kill.get_attackers_info():
-            print(attacker)
             try:
                 if attacker['corporation']['id'] == config.get_corporation_id():
                     killmail_status = 1
                     print('set killstatus to 1')
             except:
-                print('no corp')
+                print('', end='')
 
         try:
             if kill.get_victim_corporation_id() == config.get_corporation_id():
                 print('set killstatus to 2')
                 killmail_status = 2
         except:
-            print('err')
+            print('', end='')
         print('killmail status: ' + str(killmail_status))
         if killmail_status > 0:
             slack_message = SlackMessage(kill, config)
@@ -60,7 +52,6 @@ def main():
             killmail_status = 0
 
         response = requests.get('https://redisq.zkillboard.com/listen.php')
-        print('get status: ' + str(response.status_code))
         json_data = response.json()                                             # gets the json data in the response
         killmail = json_data['package']
 
@@ -206,31 +197,6 @@ class SlackMessage:
                             "value": self.kill.get_top_damage_name(),
                             "short": True
                         },
-                        {
-                            "title": "Total Value",
-                            "value": ('{:,.2f}'.format(self.kill.get_killmail_value()) + ' ISK'),
-                            "short": False
-                        }
-                    ],
-                    "thumb_url": self.kill.get_victim_ship_icon(),
-                    "fallback": "New Killmail!",
-                }
-            ],
-            "icon_emoji": self.get_message_icon_emoji()
-        }
-        return slack_message
-
-# Took out repetitive info so now just descriptive title with link to kill and total value are shown.
-# Makes the killmails posted in slack much more compact and easier to view.
-    def generate_slack_message_v2(self):
-        slack_message = {
-            "username": self.get_message_user_name(),
-            "attachments": [
-                {
-                    "title": self.get_kill_description(),
-                    "title_link": self.get_kill_link(),
-                    "color": self.get_message_color(),
-                    "fields": [
                         {
                             "title": "Total Value",
                             "value": ('{:,.2f}'.format(self.kill.get_killmail_value()) + ' ISK'),
