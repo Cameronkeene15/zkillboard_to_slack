@@ -123,11 +123,15 @@ class KillMail:
         return self.json_kill_mail['killmail']['victim']['character']['id']
 
     def get_victim_character_name(self):
-        try:
+        if self.json_kill_mail['killmail']['victim']['character']['name']:
             return self.json_kill_mail['killmail']['victim']['character']['name']
-        except:
-            print('killamil data with no victim char name error : \n\n')
-            pprint.pprint(self.json_kill_mail)
+        elif self.json_kill_mail['killmail']['victim']['corporation']['name']:
+            return self.json_kill_mail['killmail']['victim']['corporation']['name']
+        elif self.json_kill_mail['killmail']['victim']['alliance']['name']:
+            return self.json_kill_mail['killmail']['victim']['alliance']['name']
+        else:
+            print('\n\nKillamil data with no victim char name error : \n')
+            pprint.pprint(self.json_kill_mail())
             print()
             return '$No Name$'
 
