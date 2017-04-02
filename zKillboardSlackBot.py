@@ -104,7 +104,7 @@ class KillMail:
         if 'character' in self.top_damage_attacker:
             return self.top_damage_attacker['character']['name']
         elif 'faction' in self.top_damage_attacker:
-            return self.top_damage_attacker['character']['name']
+            return self.top_damage_attacker['faction']['name']
         elif 'corporation' in self.top_damage_attacker:
             return self.top_damage_attacker['corporation']['name']
         else:
