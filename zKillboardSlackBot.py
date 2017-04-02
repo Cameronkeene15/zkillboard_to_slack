@@ -79,11 +79,11 @@ class KillMail:
                 return attacker
 
     def get_final_blow_name(self):
-        if self.final_blow_attacker['character']['name']:
+        if ['character'] in self.final_blow_attacker:
             return self.final_blow_attacker['character']['name']
-        elif self.final_blow_attacker['corporation']['name']:
+        elif ['corporation'] in self.final_blow_attacker:
             return self.final_blow_attacker['corporation']['name']
-        elif self.final_blow_attacker['faction']['name']:
+        elif ['faction'] in self.final_blow_attacker:
             return self.final_blow_attacker['faction']['name']
         else:
             print('\n\nFinal Blow name Error: \n')
@@ -101,11 +101,11 @@ class KillMail:
         return top_damage_info
 
     def get_top_damage_name(self):
-        if self.top_damage_attacker['character']['name']:
+        if ['character'] in self.top_damage_attacker:
             return self.top_damage_attacker['character']['name']
-        elif self.top_damage_attacker['faction']['name']:
+        elif ['faction'] in self.top_damage_attacker:
             return self.top_damage_attacker['character']['name']
-        elif self.top_damage_attacker['corporation']['name']:
+        elif ['corporation'] in self.top_damage_attacker:
             return self.top_damage_attacker['corporation']['name']
         else:
             print("\n\nTop damage name Error: \n")
@@ -123,11 +123,11 @@ class KillMail:
         return self.json_kill_mail['killmail']['victim']['character']['id']
 
     def get_victim_character_name(self):
-        if self.json_kill_mail['killmail']['victim']['character']['name']:
+        if ['character'] in self.json_kill_mail['killmail']['victim']:
             return self.json_kill_mail['killmail']['victim']['character']['name']
-        elif self.json_kill_mail['killmail']['victim']['corporation']['name']:
+        elif ['corporation'] in self.json_kill_mail['killmail']['victim']:
             return self.json_kill_mail['killmail']['victim']['corporation']['name']
-        elif self.json_kill_mail['killmail']['victim']['alliance']['name']:
+        elif ['alliance'] in self.json_kill_mail['killmail']['victim']:
             return self.json_kill_mail['killmail']['victim']['alliance']['name']
         else:
             print('\n\nKillamil data with no victim char name error : \n')
