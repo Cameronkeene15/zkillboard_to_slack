@@ -79,10 +79,14 @@ class KillMail:
                 return attacker
 
     def get_final_blow_name(self):
-        try:
+        if self.final_blow_attacker['character']['name']:
             return self.final_blow_attacker['character']['name']
-        except:
-            print('Final Blow name error : \n\n')
+        elif self.final_blow_attacker['corporation']['name']:
+            return self.final_blow_attacker['corporation']['name']
+        elif self.final_blow_attacker['faction']['name']:
+            return self.final_blow_attacker['faction']['name']
+        else:
+            print('\n\nFinal Blow name Error: \n')
             pprint.pprint(self.json_kill_mail)
             print()
             return '$No Name$'
@@ -97,14 +101,17 @@ class KillMail:
         return top_damage_info
 
     def get_top_damage_name(self):
-        try:
+        if self.top_damage_attacker['character']['name']:
             return self.top_damage_attacker['character']['name']
-        except:
-            print('Top damage name error : \n\n')
+        elif self.top_damage_attacker['faction']['name']:
+            return self.top_damage_attacker['character']['name']
+        elif self.top_damage_attacker['corporation']['name']:
+            return self.top_damage_attacker['corporation']['name']
+        else:
+            print("\n\nTop damage name Error: \n")
             pprint.pprint(self.json_kill_mail)
             print()
             return '$No Name$'
-
 
     def get_kill_time(self):
         return self.json_kill_mail['killmail']['killTime']
