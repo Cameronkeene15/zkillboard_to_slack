@@ -52,7 +52,7 @@ def main():
             print('posted killmail')
             killmail_status = 0
 
-        response = requests.get('https://redisq.zkillboard.com/listen.php')
+        response = requests.get('https://redisq.zkillboard.com/listen.php?queID=testRunning1')
         json_data = response.json()                                             # gets the json data in the response
         killmail = json_data['package']
 
