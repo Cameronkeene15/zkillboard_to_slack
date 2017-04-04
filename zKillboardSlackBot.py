@@ -14,19 +14,19 @@ script_directory = os.path.dirname(os.path.realpath(__file__))
 config_file_path = os.path.join(script_directory, 'Config.ini')
 
 
-# TODO: create a class to handle web links such as link to zkillboard to show kill/loss
-
 def main():
-    config = ConfigHandler()                                                # sets up a config object
+    config = ConfigHandler()                            # sets up a config object
     killmail_status = 0
-
-    response = requests.get('https://redisq.zkillboard.com/listen.php?queID=testRunning1')
+    url = 'https://redisq.zkillboard.com/listen.php'
+    queue_id = config.get_queue_id()
+    if queue_id:
+        url = url + '?queueID=' + queue_id
+    response = requests.get(url)
     response.encoding = 'utf-8'
     json_data = response.json()
     killmail = json_data['package']
 
-
-    while killmail != None:
+    while killmail is not None:
         kill = KillMail(killmail)
 
         for attacker in kill.get_attackers_info():
@@ -47,12 +47,12 @@ def main():
         if killmail_status > 0:
             slack_message = SlackMessage(kill, config)
             encoded_slack_message = slack_message.encode_slack_message()
-            request_status = requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
+            requests.post(config.get_slack_web_hook(), data=encoded_slack_message)
 
-            print('posted killmail')
+            print('posted killmail: ' + str(kill.get_killmail_id()))
             killmail_status = 0
 
-        response = requests.get('https://redisq.zkillboard.com/listen.php?queID=testRunning1')
+        response = requests.get(url)
         json_data = response.json()                                             # gets the json data in the response
         killmail = json_data['package']
 
@@ -189,7 +189,6 @@ class KillMail:
 
 
 # Class SlackMessage handles putting all the necessary information into the formatted slack message per killmail.
-# TODO: maybe move the message color,icon, and name into one def so that it is only determined once/looks cleaner
 class SlackMessage:
     def __init__(self, kill, config):
         self.kill = kill
@@ -282,8 +281,9 @@ class ConfigHandler:
 
     def generate_config_file(self):
         self.config.add_section('General Settings')
-        self.config.set('General Settings', 'alliance_id', '')
+#        self.config.set('General Settings', 'alliance_id', '')
         self.config.set('General Settings', 'corporation_id', '')
+        self.config.set('General Settings', 'queue_id', '')
 
         self.config.add_section('Slack Settings')
         self.config.set('Slack Settings', 'slack_web_hook', 'https://hooks.slack.com/services/')
@@ -311,17 +311,23 @@ class ConfigHandler:
         except:
             print('Error Reading Config File!')
 
-    def get_alliance_id(self):
-        try:
-            return int(self.config.get('General Settings', 'alliance_id'))
-        except:
-            return 0
+#    def get_alliance_id(self):
+#        try:
+#            return int(self.config.get('General Settings', 'alliance_id'))
+#        except:
+#            return 0
 
     def get_corporation_id(self):
         try:
             return int(self.config.get('General Settings', 'corporation_id'))
         except:
             return 0
+
+    def get_queue_id(self):
+        try:
+            return self.config.get('General Settings', 'queue_id')
+        except:
+            return False
 
     def get_slack_web_hook(self):
         try:
