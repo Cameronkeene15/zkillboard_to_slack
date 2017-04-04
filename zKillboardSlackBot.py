@@ -376,4 +376,5 @@ class ConfigHandler:
         except:
             print('Error Getting loss_color From Config.ini')
 
+
 main()
