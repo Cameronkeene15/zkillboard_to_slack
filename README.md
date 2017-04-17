@@ -7,4 +7,4 @@ Once downloaded, the Config.ini file needs to be configured with the corporation
 
 To run the script crontab can be used. The example below runs the script every five minutes and uses flock to make sure that it will not run the script twice if it is already running to prevent errors.
 
-#*/5 * * * * flock -nx /home/cameron/development/Eve-Online-Slack-Bot/.processlock -c /home/cameron/development/Eve-Online-Slack-Bot/zKillboardSlackBot.py >> /home/cameron/development/Eve-Online-Slack-Bot/log.txt 2>&1
+*/5 * * * * flock -nx /home/cameron/development/Eve-Online-Slack-Bot/.processlock -c /home/cameron/development/Eve-Online-Slack-Bot/zKillboardSlackBot.py >> /home/cameron/development/Eve-Online-Slack-Bot/log.txt 2>&1
