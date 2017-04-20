@@ -22,7 +22,10 @@ def main():
         url = url + '?queueID=' + queue_id
     response = requests.get(url)
     response.encoding = 'utf-8'
-    json_data = response.json()
+    if response.status_code == 200:
+        json_data = response.json()
+    else:
+        sys.exit()
     killmail = json_data['package']
 
     while killmail is not None:
@@ -52,7 +55,10 @@ def main():
             killmail_status = 0
 
         response = requests.get(url)
-        json_data = response.json()                                             # gets the json data in the response
+        if response.status_code == 200:
+            json_data = response.json()                                             # gets the json data in the response
+        else:
+            sys.exit()
         killmail = json_data['package']
 
 
