@@ -10,7 +10,7 @@ import pprint
 
 # Used so that the Config.ini and recent_kill_list.csv are always in the same location as the script
 script_directory = os.path.dirname(os.path.realpath(__file__))
-config_file_path = os.path.join(script_directory, 'Config.ini')
+config_file_path = os.path.join(script_directory, 'config.ini')
 
 
 def main():
