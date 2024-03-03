@@ -1,4 +1,7 @@
 # Eve-Online-Slack-Bot
+
+# This script is dated and no longer works due to changes Eve Online made to their API. The changes required users to be signed into zkillboard in order for it to pull api information from Eve Online. In return, this script became useless.
+
 This is a script which will go through all recent kills happening in EVE and post any killmails that are losses or kills to slack in a formated message.
 
 
